@@ -1,0 +1,120 @@
+// Frontend Implementation
+
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Bar, Pie } from 'react-chartjs-2';
+import 'chart.js/auto';
+
+const App = () => {
+  const [selectedMonth, setSelectedMonth] = useState('March');
+  const [transactions, setTransactions] = useState([]);
+  const [statistics, setStatistics] = useState({});
+  const [barChartData, setBarChartData] = useState([]);
+  const [pieChartData, setPieChartData] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [transactionRes, statisticsRes, barChartRes, pieChartRes] = await Promise.all([
+        axios.get('/api/transactions', { params: { month: selectedMonth } }),
+        axios.get('/api/statistics', { params: { month: selectedMonth } }),
+        axios.get('/api/bar-chart', { params: { month: selectedMonth } }),
+        axios.get('/api/pie-chart', { params: { month: selectedMonth } }),
+      ]);
+
+      setTransactions(transactionRes.data.transactions);
+      setStatistics(statisticsRes.data);
+      setBarChartData(barChartRes.data);
+      setPieChartData(pieChartRes.data);
+    };
+
+    fetchData();
+  }, [selectedMonth]);
+
+  const handleMonthChange = (event) => {
+    setSelectedMonth(event.target.value);
+  };
+
+  return (
+    <div>
+      <h1>Transaction Dashboard</h1>
+      <select value={selectedMonth} onChange={handleMonthChange}>
+        {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((month) => (
+          <option key={month} value={month}>
+            {month}
+          </option>
+        ))}
+      </select>
+
+      <div>
+        <h2>Transactions</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Description</th>
+              <th>Price</th>
+              <th>Sold</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.map((tx) => (
+              <tr key={tx._id}>
+                <td>{tx.title}</td>
+                <td>{tx.description}</td>
+                <td>{tx.price}</td>
+                <td>{tx.sold ? 'Yes' : 'No'}</td>
+                <td>{new Date(tx.dateOfSale).toLocaleDateString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <h2>Statistics</h2>
+        <p>Total Sales: {statistics.totalSales}</p>
+        <p>Sold Items: {statistics.soldItems}</p>
+        <p>Unsold Items: {statistics.unsoldItems}</p>
+      </div>
+
+      <div>
+        <h2>Bar Chart</h2>
+        <Bar
+          data={{
+            labels: barChartData.map((data) => data.range),
+            datasets: [
+              {
+                label: 'Items in Range',
+                data: barChartData.map((data) => data.count),
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+              },
+            ],
+          }}
+        />
+      </div>
+
+      <div>
+        <h2>Pie Chart</h2>
+        <Pie
+          data={{
+            labels: pieChartData.map((data) => data._id),
+            datasets: [
+              {
+                data: pieChartData.map((data) => data.count),
+                backgroundColor: [
+                  '#FF6384',
+                  '#36A2EB',
+                  '#FFCE56',
+                  '#4BC0C0',
+                  '#9966FF',
+                  '#FF9F40',
+                ],
+              },
+            ],
+          }}
+        />
+      </div>
+    </div>
+  );
+};
